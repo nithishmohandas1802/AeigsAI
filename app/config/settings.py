@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_name: str
     app_version: str
     app_description: str
+    database_url: str
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
