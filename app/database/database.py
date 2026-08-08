@@ -18,3 +18,12 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     pass
 
+from collections.abc import Generator
+
+
+def get_db() -> Generator:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
