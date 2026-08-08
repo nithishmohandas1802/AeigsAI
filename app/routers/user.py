@@ -1,69 +1,79 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status 
 from sqlalchemy.orm import Session
-
+from app.exceptions import UserAlreadyExistsError
 from app.database.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.services.user_service import (
+    create_user as create_user_service,
+    get_users as get_users_service,
+    update_user as update_user_service,
+    delete_user as delete_user_service
+)
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
 
-@router.post("")
+@router.post(
+    "",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_user(
     user: UserCreate,
     db: Session = Depends(get_db),
 ):
-    new_user = User(
-        username=user.username,
-        email=user.email,
-    )
+    try:
+        return create_user_service(db, user)
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    except UserAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
 
-    return new_user
-
-@router.get("")
+@router.get("", response_model=list[UserResponse])
 def get_users(
     db: Session = Depends(get_db),
 ):
-    users = db.query(User).all()
+    return get_users_service(db)
 
-    return users
-
-@router.put("/{user_id}")
+@router.put(
+    "/{user_id}",
+    response_model=UserResponse,
+)
 def update_user(
     user_id: int,
     user: UserUpdate,
     db: Session = Depends(get_db),
 ):
-    existing_user = db.query(User).filter(User.id == user_id).first()
+    updated_user = update_user_service(
+        db,
+        user_id,
+        user,
+    )
 
-    if existing_user is None:
-        return {"message": "User not found"}
+    if updated_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
 
-    existing_user.username = user.username
-    existing_user.email = user.email
-
-    db.commit()
-    db.refresh(existing_user)
-
-    return existing_user
+    return updated_user
 
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
 ):
-    existing_user = db.query(User).filter(User.id == user_id).first()
+    deleted = delete_user_service(db, user_id)
 
-    if existing_user is None:
-        return {"message": "User not found"}
-
-    db.delete(existing_user)
-    db.commit()
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
 
     return {"message": "User deleted successfully"}
