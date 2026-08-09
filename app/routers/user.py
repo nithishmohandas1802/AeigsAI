@@ -7,6 +7,7 @@ from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.services.user_service import (
     create_user as create_user_service,
     get_users as get_users_service,
+    get_user_by_id as get_user_by_id_service,
     update_user as update_user_service,
     delete_user as delete_user_service
 )
@@ -39,6 +40,23 @@ def get_users(
     db: Session = Depends(get_db),
 ):
     return get_users_service(db)
+@router.get(
+    "/{user_id}",
+    response_model=UserResponse,
+)
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    user = get_user_by_id_service(db, user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return user
 
 @router.put(
     "/{user_id}",
