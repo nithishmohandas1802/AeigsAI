@@ -4,12 +4,14 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserPatch
 from sqlalchemy.exc import IntegrityError
 from app.exceptions import UserAlreadyExistsError
+from app.security.password import hash_password
 
 
 def create_user(db: Session, user_data: UserCreate) -> User:
     new_user = User(
         username=user_data.username,
         email=user_data.email,
+        password_hash=hash_password(user_data.password),
     )
 
     db.add(new_user)
@@ -78,3 +80,27 @@ def get_user_by_id(
         .filter(User.id == user_id)
         .first()
     )
+
+def patch_user(
+    db: Session,
+    user_id: int,
+    user_data: UserPatch,
+) -> User | None:
+    existing_user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if existing_user is None:
+        return None
+
+    update_data = user_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(existing_user, field, value)
+
+    db.commit()
+    db.refresh(existing_user)
+
+    return existing_user
