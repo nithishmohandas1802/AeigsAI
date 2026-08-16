@@ -48,8 +48,15 @@ def update_user(
     existing_user.username = user_data.username
     existing_user.email = user_data.email
 
-    db.commit()
-    db.refresh(existing_user)
+    try:
+        db.commit()
+        db.refresh(existing_user)
+
+    except IntegrityError:
+        db.rollback()
+        raise UserAlreadyExistsError(
+            "Username or email already exists"
+        )
 
     return existing_user
 
@@ -67,7 +74,13 @@ def delete_user(
         return False
 
     db.delete(existing_user)
-    db.commit()
+
+    try:
+        db.commit()
+
+    except IntegrityError:
+        db.rollback()
+        raise
 
     return True
 
@@ -100,7 +113,14 @@ def patch_user(
     for field, value in update_data.items():
         setattr(existing_user, field, value)
 
-    db.commit()
-    db.refresh(existing_user)
+    try:
+        db.commit()
+        db.refresh(existing_user)
+
+    except IntegrityError:
+        db.rollback()
+        raise UserAlreadyExistsError(
+            "Username or email already exists"
+        )
 
     return existing_user
