@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models import user
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginRequest, TokenResponse
 from app.services import auth_service
 from app.security.jwt import create_access_token
 
@@ -12,7 +12,10 @@ router = APIRouter(
     tags=["Authentication"],
 )
 
-@router.post("/login")
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+)
 def login(
     login_data: LoginRequest,
     db: Session = Depends(get_db),
