@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Project root directory (AegisAI/)
@@ -11,9 +11,14 @@ class Settings(BaseSettings):
     app_version: str
     app_description: str
     database_url: str
-    jwt_secret_key: str
+    jwt_secret_key: str = Field(
+        min_length=32,
+    )
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = Field(
+        default=30,
+        gt=0,
+    )
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
