@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status 
 from sqlalchemy.orm import Session
-from app.exceptions import UserAlreadyExistsError
 from app.database.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
@@ -28,14 +27,7 @@ def create_user(
     user: UserCreate,
     db: Session = Depends(get_db),
 ):
-    try:
-        return create_user_service(db, user)
-
-    except UserAlreadyExistsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        )
+    return create_user_service(db, user)
 
 @router.get("/", response_model=list[UserResponse])
 def get_users(
