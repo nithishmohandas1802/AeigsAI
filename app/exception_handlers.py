@@ -27,7 +27,7 @@ async def http_exception_handler(
     exc: HTTPException,
 ) -> JSONResponse:
     code = (
-        exc.headers.get("X-AegisAI-Error-Code")
+        exc.headers.get("X-AegisAI-Error-Code", ErrorCode.HTTP_ERROR)
         if exc.headers
         else ErrorCode.HTTP_ERROR
     )
