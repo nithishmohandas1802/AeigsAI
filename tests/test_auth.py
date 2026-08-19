@@ -417,10 +417,10 @@ def test_forbidden_error_response(client, db):
     data = response.json()
 
     assert data["success"] is False
-    assert data["error"]["code"] == "HTTP_ERROR"
+    assert data["error"]["code"] == "FORBIDDEN"
     assert data["error"]["message"] == (
-        "You are not allowed to update this user"
-    )
+    "You are not allowed to update this user"
+)
     assert data["error"]["status"] == 403
 
 def test_validation_error_response(client):

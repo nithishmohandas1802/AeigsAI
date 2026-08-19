@@ -1,22 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, status 
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
+
 from app.database.database import get_db
 from app.dependencies import get_current_user
+from app.exceptions import ForbiddenError, UserNotFoundError
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate,UserPatch, UserResponse
+from app.schemas.user import (
+    UserCreate,
+    UserPatch,
+    UserResponse,
+    UserUpdate,
+)
 from app.services.user_service import (
     create_user as create_user_service,
-    get_users as get_users_service,
+    delete_user as delete_user_service,
     get_user_by_id as get_user_by_id_service,
+    get_users as get_users_service,
     patch_user as patch_user_service,
     update_user as update_user_service,
-    delete_user as delete_user_service
 )
+
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
+
 
 @router.post(
     "",
@@ -29,12 +38,18 @@ def create_user(
 ):
     return create_user_service(db, user)
 
-@router.get("/", response_model=list[UserResponse])
+
+@router.get(
+    "/",
+    response_model=list[UserResponse],
+)
 def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     return get_users_service(db)
+
+
 @router.get(
     "/{user_id}",
     response_model=UserResponse,
@@ -47,12 +62,10 @@ def get_user(
     user = get_user_by_id_service(db, user_id)
 
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+        raise UserNotFoundError()
 
     return user
+
 
 @router.put(
     "/{user_id}",
@@ -65,9 +78,8 @@ def update_user(
     current_user: User = Depends(get_current_user),
 ):
     if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not allowed to update this user",
+        raise ForbiddenError(
+            "You are not allowed to update this user"
         )
 
     updated_user = update_user_service(
@@ -77,12 +89,10 @@ def update_user(
     )
 
     if updated_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+        raise UserNotFoundError()
 
     return updated_user
+
 
 @router.patch(
     "/{user_id}",
@@ -95,9 +105,8 @@ def patch_user(
     current_user: User = Depends(get_current_user),
 ):
     if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not allowed to update this user",
+        raise ForbiddenError(
+            "You are not allowed to update this user"
         )
 
     updated_user = patch_user_service(
@@ -107,12 +116,10 @@ def patch_user(
     )
 
     if updated_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+        raise UserNotFoundError()
 
     return updated_user
+
 
 @router.delete(
     "/{user_id}",
@@ -124,17 +131,16 @@ def delete_user(
     current_user: User = Depends(get_current_user),
 ):
     if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not allowed to delete this user",
+        raise ForbiddenError(
+            "You are not allowed to delete this user"
         )
 
-    deleted = delete_user_service(db, user_id)
+    deleted = delete_user_service(
+        db,
+        user_id,
+    )
 
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+        raise UserNotFoundError()
 
     return None

@@ -199,3 +199,57 @@ def test_get_user_without_token(client, db):
     )
 
     assert response.status_code == 401
+
+def test_get_nonexistent_user_returns_standard_error(client, db):
+    user = create_test_user(db)
+
+    response = client.get(
+        "/users/999999",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"]["code"] == "USER_NOT_FOUND"
+    assert data["error"]["message"] == "User not found"
+    assert data["error"]["status"] == 404
+
+
+def test_user_cannot_update_another_user_returns_standard_error(
+    client,
+    db,
+):
+    user = create_test_user(
+        db,
+        username="userone",
+        email="userone@example.com",
+    )
+
+    another_user = create_test_user(
+        db,
+        username="usertwo",
+        email="usertwo@example.com",
+    )
+
+    response = client.put(
+        f"/users/{another_user.id}",
+        headers=get_auth_headers(user),
+        json={
+            "username": "updateduser",
+            "email": "updated@example.com",
+        },
+    )
+
+    assert response.status_code == 403
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"]["code"] == "FORBIDDEN"
+    assert data["error"]["message"] == (
+        "You are not allowed to update this user"
+    )
+    assert data["error"]["status"] == 403
