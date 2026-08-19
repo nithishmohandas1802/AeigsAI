@@ -123,12 +123,13 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    deleted = delete_user_service(db, user_id)
     if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not allowed to delete this user",
         )
+
+    deleted = delete_user_service(db, user_id)
 
     if not deleted:
         raise HTTPException(

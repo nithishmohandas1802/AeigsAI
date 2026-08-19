@@ -10,13 +10,13 @@ async def aegisai_exception_handler(
     exc: AegisAIException,
 ) -> JSONResponse:
     return JSONResponse(
-        status_code=409,
+        status_code=exc.status_code,
         content={
             "success": False,
             "error": {
                 "code": exc.code,
                 "message": exc.message,
-                "status": 409,
+                "status": exc.status_code,
             },
         },
     )
