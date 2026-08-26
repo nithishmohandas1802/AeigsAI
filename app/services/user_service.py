@@ -5,7 +5,11 @@ from app.schemas.user import UserCreate, UserUpdate, UserPatch
 from sqlalchemy.exc import IntegrityError
 from app.exceptions import UserAlreadyExistsError
 from app.security.password import hash_password
-
+from app.cache.cache_service import (
+    delete_cache,
+    get_cache,
+    set_cache,
+)
 
 def create_user(db: Session, user_data: UserCreate) -> User:
     new_user = User(
@@ -83,6 +87,7 @@ def update_user(
         raise UserAlreadyExistsError(
             "Username or email already exists"
         )
+    delete_cache(f"aegisai:user:{user_id}")
 
     return existing_user
 
@@ -108,17 +113,43 @@ def delete_user(
         db.rollback()
         raise
 
+    delete_cache(f"aegisai:user:{user_id}")
+
     return True
 
 def get_user_by_id(
     db: Session,
     user_id: int,
 ) -> User | None:
-    return (
+    cache_key = f"aegisai:user:{user_id}"
+
+    cached_user = get_cache(cache_key)
+
+    if cached_user is not None:
+        return cached_user
+
+    user = (
         db.query(User)
         .filter(User.id == user_id)
         .first()
     )
+
+    if user is None:
+        return None
+
+    user_data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+    }
+
+    set_cache(
+        cache_key,
+        user_data,
+        ttl=60,
+    )
+
+    return user
 
 def patch_user(
     db: Session,
@@ -148,5 +179,6 @@ def patch_user(
         raise UserAlreadyExistsError(
             "Username or email already exists"
         )
+    delete_cache(f"aegisai:user:{user_id}")
 
     return existing_user

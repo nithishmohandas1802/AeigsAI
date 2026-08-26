@@ -1,9 +1,14 @@
 from app.models.user import User
 from app.security.jwt import create_access_token
 from app.security.password import hash_password
+from app.cache.redis import redis_client
 
 
-def create_test_user(db, username="testuser", email="test@example.com"):
+def create_test_user(
+    db,
+    username="testuser",
+    email="test@example.com",
+):
     user = User(
         username=username,
         email=email,
@@ -255,11 +260,6 @@ def test_user_cannot_update_another_user_returns_standard_error(
         "You are not allowed to update this user"
     )
     assert data["error"]["status"] == 403
-
-
-# ============================================================
-# Build 022 — Pagination and Filtering Tests
-# ============================================================
 
 
 def test_get_users_default_pagination(client, db):
@@ -554,3 +554,152 @@ def test_get_users_without_token_returns_401(client):
 
     assert data["success"] is False
     assert data["error"]["code"] == "UNAUTHORIZED"
+
+
+# ============================================================
+# Build 023 — Redis Cache Tests
+# ============================================================
+
+
+def test_get_user_by_id_populates_cache(
+    client,
+    db,
+):
+    user = create_test_user(
+        db,
+        username="cacheuser",
+        email="cache@example.com",
+    )
+
+    cache_key = f"aegisai:user:{user.id}"
+
+    redis_client.delete(cache_key)
+
+    response = client.get(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 200
+
+    cached_value = redis_client.get(cache_key)
+
+    assert cached_value is not None
+    assert "cacheuser" in cached_value
+    assert "cache@example.com" in cached_value
+
+
+def test_get_user_by_id_returns_cached_user(
+    client,
+    db,
+):
+    user = create_test_user(
+        db,
+        username="cachehituser",
+        email="cachehit@example.com",
+    )
+
+    cache_key = f"aegisai:user:{user.id}"
+
+    redis_client.set(
+        cache_key,
+        (
+            '{"id": %d, '
+            '"username": "cachedusername", '
+            '"email": "cached@example.com"}'
+        )
+        % user.id,
+        ex=60,
+    )
+
+    response = client.get(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == user.id
+    assert data["username"] == "cachedusername"
+    assert data["email"] == "cached@example.com"
+
+
+def test_update_user_invalidates_cache(client, db):
+    user = create_test_user(db)
+
+    response = client.get(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 200
+
+    cache_key = f"aegisai:user:{user.id}"
+
+    assert redis_client.exists(cache_key)
+
+    response = client.put(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+        json={
+            "username": "updatedcacheuser",
+            "email": "updatedcache@example.com",
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert redis_client.exists(cache_key) == 0
+
+
+def test_patch_user_invalidates_cache(client, db):
+    user = create_test_user(db)
+
+    response = client.get(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 200
+
+    cache_key = f"aegisai:user:{user.id}"
+
+    assert redis_client.exists(cache_key)
+
+    response = client.patch(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+        json={
+            "username": "patchedcacheuser",
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert redis_client.exists(cache_key) == 0
+
+
+def test_delete_user_invalidates_cache(client, db):
+    user = create_test_user(db)
+
+    response = client.get(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 200
+
+    cache_key = f"aegisai:user:{user.id}"
+
+    assert redis_client.exists(cache_key)
+
+    response = client.delete(
+        f"/users/{user.id}",
+        headers=get_auth_headers(user),
+    )
+
+    assert response.status_code == 204
+
+    assert redis_client.exists(cache_key) == 0

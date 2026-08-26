@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database.database import Base, get_db
-
+from app.cache.redis import redis_client
 
 SQLALCHEMY_DATABASE_URL = "sqlite://"
 
@@ -31,6 +31,8 @@ TestingSessionLocal = sessionmaker(
 def db():
     Base.metadata.create_all(bind=engine)
 
+    redis_client.flushdb()
+
     session = TestingSessionLocal()
 
     try:
@@ -38,6 +40,7 @@ def db():
     finally:
         session.close()
         Base.metadata.drop_all(bind=engine)
+        redis_client.flushdb()
 
 
 @pytest.fixture
