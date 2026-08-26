@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -10,6 +10,7 @@ from app.schemas.user import (
     UserPatch,
     UserResponse,
     UserUpdate,
+    UserListResponse,
 )
 from app.services.user_service import (
     create_user as create_user_service,
@@ -41,13 +42,40 @@ def create_user(
 
 @router.get(
     "/",
-    response_model=list[UserResponse],
+    response_model=UserListResponse,
 )
 def get_users(
+    page: int = Query(
+        default=1,
+        ge=1,
+    ),
+    page_size: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+    ),
+    username: str | None = None,
+    email: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return get_users_service(db)
+    users, total = get_users_service(
+        db=db,
+        page=page,
+        page_size=page_size,
+        username=username,
+        email=email,
+    )
+
+    pages = (total + page_size - 1) // page_size
+
+    return {
+        "items": users,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": pages,
+    }
 
 
 @router.get(

@@ -28,8 +28,34 @@ def create_user(db: Session, user_data: UserCreate) -> User:
 
     return new_user
 
-def get_users(db: Session) -> list[User]:
-    return db.query(User).all()
+def get_users(
+    db: Session,
+    page: int,
+    page_size: int,
+    username: str | None = None,
+    email: str | None = None,
+) -> tuple[list[User], int]:
+    query = db.query(User)
+
+    if username is not None:
+        query = query.filter(User.username == username)
+
+    if email is not None:
+        query = query.filter(User.email == email)
+
+    total = query.count()
+
+    offset = (page - 1) * page_size
+
+    users = (
+        query
+        .order_by(User.id)
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return users, total
 
 def update_user(
     db: Session,

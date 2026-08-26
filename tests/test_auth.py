@@ -7,6 +7,7 @@ import jwt
 
 from app.config.settings import settings
 
+
 def test_login_with_invalid_credentials(client):
     response = client.post(
         "/auth/login",
@@ -100,6 +101,7 @@ def test_login_with_short_password(client):
 
     assert response.status_code == 422
 
+
 def test_access_protected_endpoint_with_valid_token(client, db):
     test_user = User(
         username="protecteduser",
@@ -127,10 +129,12 @@ def test_access_protected_endpoint_with_valid_token(client, db):
 
     assert response.status_code == 200
 
+
 def test_access_protected_endpoint_without_token(client):
     response = client.get("/users/")
 
     assert response.status_code == 401
+
 
 def test_access_protected_endpoint_with_invalid_token(client):
     response = client.get(
@@ -141,6 +145,7 @@ def test_access_protected_endpoint_with_invalid_token(client):
     )
 
     assert response.status_code == 401
+
 
 def test_access_protected_endpoint_with_nonexistent_user_token(client):
     token = create_access_token(
@@ -158,6 +163,7 @@ def test_access_protected_endpoint_with_nonexistent_user_token(client):
     )
 
     assert response.status_code == 401
+
 
 def test_user_cannot_update_another_user(client, db):
     user_one = User(
@@ -198,6 +204,7 @@ def test_user_cannot_update_another_user(client, db):
 
     assert response.status_code == 403
 
+
 def test_user_cannot_patch_another_user(client, db):
     user_one = User(
         username="patchuserone",
@@ -236,6 +243,7 @@ def test_user_cannot_patch_another_user(client, db):
 
     assert response.status_code == 403
 
+
 def test_user_cannot_delete_another_user(client, db):
     user_one = User(
         username="deleteuserone",
@@ -271,6 +279,7 @@ def test_user_cannot_delete_another_user(client, db):
 
     assert response.status_code == 403
 
+
 def test_login_returns_valid_jwt(client, db):
     test_user = User(
         username="jwtuser",
@@ -301,6 +310,7 @@ def test_login_returns_valid_jwt(client, db):
     assert payload["sub"] == str(test_user.id)
     assert payload["email"] == test_user.email
 
+
 def test_access_protected_endpoint_with_malformed_token(client):
     response = client.get(
         "/users/",
@@ -310,6 +320,7 @@ def test_access_protected_endpoint_with_malformed_token(client):
     )
 
     assert response.status_code == 401
+
 
 def test_access_protected_endpoint_with_expired_token(client):
     expired_token = jwt.encode(
@@ -331,6 +342,7 @@ def test_access_protected_endpoint_with_expired_token(client):
 
     assert response.status_code == 401
 
+
 def test_access_protected_endpoint_with_token_without_sub(client):
     token = create_access_token(
         {
@@ -347,6 +359,7 @@ def test_access_protected_endpoint_with_token_without_sub(client):
 
     assert response.status_code == 401
 
+
 def test_unauthorized_error_response(client):
     response = client.get(
         "/users/",
@@ -360,9 +373,10 @@ def test_unauthorized_error_response(client):
     data = response.json()
 
     assert data["success"] is False
-    assert data["error"]["code"] == "HTTP_ERROR"
+    assert data["error"]["code"] == "UNAUTHORIZED"
     assert data["error"]["message"] == "Invalid or expired token"
     assert data["error"]["status"] == 401
+
 
 def test_missing_authentication_error_response(client):
     response = client.get("/users/")
@@ -372,8 +386,9 @@ def test_missing_authentication_error_response(client):
     data = response.json()
 
     assert data["success"] is False
-    assert data["error"]["code"] == "HTTP_ERROR"
+    assert data["error"]["code"] == "UNAUTHORIZED"
     assert data["error"]["status"] == 401
+
 
 def test_forbidden_error_response(client, db):
     user_one = User(
@@ -419,9 +434,10 @@ def test_forbidden_error_response(client, db):
     assert data["success"] is False
     assert data["error"]["code"] == "FORBIDDEN"
     assert data["error"]["message"] == (
-    "You are not allowed to update this user"
-)
+        "You are not allowed to update this user"
+    )
     assert data["error"]["status"] == 403
+
 
 def test_validation_error_response(client):
     response = client.post(
