@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-
+from app.routers.documents import router as documents_router
 from app.routers.health import router as health_router
 from app.config.settings import settings
 from app.routers.user import router as user_router
@@ -44,3 +44,4 @@ app.include_router(health_router)
 app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(background_router)
+app.include_router(documents_router)

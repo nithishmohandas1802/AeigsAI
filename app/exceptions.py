@@ -8,6 +8,7 @@ class ErrorCode:
     UNAUTHORIZED = "UNAUTHORIZED"
     VALIDATION_ERROR = "VALIDATION_ERROR"
     USER_ALREADY_EXISTS = "USER_ALREADY_EXISTS"
+    INVALID_DOCUMENT = "INVALID_DOCUMENT"
     INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
     HTTP_ERROR = "HTTP_ERROR"
 
@@ -52,6 +53,20 @@ class UserNotFoundError(AegisAIException):
             message=message,
             code=ErrorCode.USER_NOT_FOUND,
             status_code=404,
+        )
+
+
+class InvalidDocumentError(AegisAIException):
+    """Raised when an uploaded document cannot be processed."""
+
+    def __init__(
+        self,
+        message: str = "Invalid PDF document",
+    ):
+        super().__init__(
+            message=message,
+            code=ErrorCode.INVALID_DOCUMENT,
+            status_code=400,
         )
 
 
